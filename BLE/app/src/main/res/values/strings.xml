@@ -1,3 +1,5 @@
 <resources>
-    <string name="app_name">BLE</string>
+    <string name="app_name">Smart BLE Bulb</string>
+    <string name="status">Status:</string>
+
 </resources>
