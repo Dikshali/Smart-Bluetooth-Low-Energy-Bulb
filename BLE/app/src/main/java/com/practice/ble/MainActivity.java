@@ -97,7 +97,64 @@ public class MainActivity extends AppCompatActivity {
         beepBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                if(beepGattChar!=null){
+                    boolean rs = bluetoothGatt.readCharacteristic(beepGattChar);
+                    if(!rs){
+                        Log.d(TAG, "Can't read beep Char");
+                    }
+                    byte[] val = beepGattChar.getValue();
+                    int i =  Character.getNumericValue(val[0]);
+                    if(i==1){
+                        byte[] value = new byte[1];
+                        value[0] = (byte) (0 & 0xFF);
+                        beepGattChar.setValue(value);
+                        boolean status = bluetoothGatt.writeCharacteristic(beepGattChar);
+                        if(status){
+                            beepBtn.setBackgroundColor(getResources().getColor(R.color.colorDisable));
+                        }
+                    }else{
+                        byte[] value = new byte[1];
+                        value[0] = (byte) (1 & 0xFF);
+                        beepGattChar.setValue(value);
+                        boolean status = bluetoothGatt.writeCharacteristic(beepGattChar);
+                        if(status){
+                            beepBtn.setBackgroundColor(getResources().getColor(R.color.colorPrimary));
+                        }
+                    }
 
+                }
+            }
+        });
+
+        bulbOff.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(bulbGattChar!=null){
+                    byte[] value = new byte[1];
+                    value[0] = (byte) (0 & 0xFF);
+                    bulbGattChar.setValue(value);
+                    boolean status = bluetoothGatt.writeCharacteristic(bulbGattChar);
+                    if(status){
+                        bulbOff.setBackgroundColor(getResources().getColor(R.color.colorPrimary));
+                        bulbOn.setBackgroundColor(getResources().getColor(R.color.colorDisable));
+                    }
+                }
+            }
+        });
+
+        bulbOn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(bulbGattChar!=null){
+                    byte[] value = new byte[1];
+                    value[0] = (byte) (1 & 0xFF);
+                    bulbGattChar.setValue(value);
+                    boolean status = bluetoothGatt.writeCharacteristic(bulbGattChar);
+                    if(status){
+                        bulbOff.setBackgroundColor(getResources().getColor(R.color.colorDisable));
+                        bulbOn.setBackgroundColor(getResources().getColor(R.color.colorPrimary));
+                    }
+                }
             }
         });
     }
@@ -138,16 +195,22 @@ public class MainActivity extends AppCompatActivity {
                         temperature.setText(stringBuilder);
                     }
                 });
-            }/*else if( characteristic.getUuid().toString().equals(CHARACTERISTIC_BULB.toString())){
+            }else if( characteristic.getUuid().toString().equals(CHARACTERISTIC_BULB.toString())){
                 byte[] val = characteristic.getValue();
                 final int i =  Character.getNumericValue(val[0]);
-                Log.d(TAG, "change "+ i);
+                Log.d(TAG, "read "+ i);
                 MainActivity.this.runOnUiThread(new Runnable() {
                     public void run() {
-                        bulbSwitch.setChecked(!(i==0));
+                        if(i==0){
+                            bulbOff.setBackgroundColor(getResources().getColor(R.color.colorPrimary));
+                            bulbOn.setBackgroundColor(getResources().getColor(R.color.colorDisable));
+                        }else{
+                            bulbOn.setBackgroundColor(getResources().getColor(R.color.colorPrimary));
+                            bulbOff.setBackgroundColor(getResources().getColor(R.color.colorDisable));
+                        }
                     }
                 });
-            }*/
+            }
         }
 
         @Override
@@ -175,8 +238,6 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onServicesDiscovered(final BluetoothGatt gatt, final int status) {
-
-            List<BluetoothGattService> gattServices = bluetoothGatt.getServices();
             gattService = gatt.getService(SERVICE_ID);
             if(gattService != null){
                 temperatureGattChar = gattService.getCharacteristic(CHARACTERISTIC_TEMP);
@@ -191,19 +252,6 @@ public class MainActivity extends AppCompatActivity {
                     gatt.writeDescriptor(descriptor);
                 }
                 gatt.setCharacteristicNotification(temperatureGattChar, true);
-                /*for (BluetoothGattDescriptor descriptor : bulbGattChar.getDescriptors()) {
-                    descriptor.setValue( BluetoothGattDescriptor.ENABLE_INDICATION_VALUE);
-                    gatt.writeDescriptor(descriptor);
-                }
-                gatt.setCharacteristicNotification(bulbGattChar, true);*/
-                /*boolean rs = gatt.readCharacteristic(bulbGattChar);
-                if(!rs){
-                    Log.d(TAG, "Can't read bulb Char");
-                }*/
-                /*boolean rs1 = gatt.readCharacteristic(beepGattChar);
-                if(!rs1){
-                    Log.d(TAG, "Can't read beep Char");
-                }*/
             }
         }
 
@@ -213,7 +261,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        // Result of a characteristic read operation
         public void onCharacteristicRead(BluetoothGatt gatt,
                                          final BluetoothGattCharacteristic characteristic,
                                          int status) {
@@ -238,7 +285,11 @@ public class MainActivity extends AppCompatActivity {
                     final int i =  Character.getNumericValue(val[0]);
                     MainActivity.this.runOnUiThread(new Runnable() {
                         public void run() {
-
+                            if(i==1){
+                                beepBtn.setBackgroundColor(getResources().getColor(R.color.colorPrimary));
+                            }else{
+                                beepBtn.setBackgroundColor(getResources().getColor(R.color.colorDisable));
+                            }
                         }
                     });
                 }
@@ -256,7 +307,7 @@ public class MainActivity extends AppCompatActivity {
                 List<ScanFilter> filters = new ArrayList<>();
                 filters.add(scanFilter);
                 final ScanSettings settings = new ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build();
-                Log.d("ok","starting....");
+                Log.d(TAG,"starting....");
                 btScanner.startScan(filters, settings, leScanCallback);
             }
         });
