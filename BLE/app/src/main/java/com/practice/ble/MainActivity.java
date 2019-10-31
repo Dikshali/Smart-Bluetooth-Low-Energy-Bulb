@@ -8,6 +8,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.BluetoothLeScanner;
@@ -54,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
     BluetoothLeScanner btScanner;
     BluetoothGatt bluetoothGatt;
     BluetoothGattService gattService;
+    BluetoothGattCharacteristic temperatureGattChar, bulbGattChar, beepGattChar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,24 +92,24 @@ public class MainActivity extends AppCompatActivity {
 
         startScanning();
 
-        bulbSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+        /*bulbSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 BluetoothGattCharacteristic charac = gattService.getCharacteristic(CHARACTERISTIC_BULB);
                 if (charac == null) {
                     Log.e("GATT", "char not found!");
                 }
                 if (isChecked) {
-                    /*byte[] value = new byte[1];
+                    *//*byte[] value = new byte[1];
                     value[0] = (byte) (1);
                     charac.setValue(value);
-                    boolean status = bluetoothGatt.writeCharacteristic(charac);*/
+                    boolean status = bluetoothGatt.writeCharacteristic(charac);*//*
                     //return status;
                     Toast.makeText(MainActivity.this, "Switch Blub ON : ", Toast.LENGTH_SHORT).show();
                 } else {
                     Toast.makeText(MainActivity.this, "Switch Blub OFF", Toast.LENGTH_SHORT).show();
                 }
             }
-        });
+        });*/
         beepBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -139,11 +141,29 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt, final BluetoothGattCharacteristic characteristic) {
             // this will get called anytime you perform a read or write characteristic operation
-            MainActivity.this.runOnUiThread(new Runnable() {
-                public void run() {
-
-                }
-            });
+            if( characteristic.getUuid().toString().equals(CHARACTERISTIC_TEMP.toString())){
+                byte[] val = characteristic.getValue();
+                final int i =  Character.getNumericValue(val[0]);
+                final int j =  Character.getNumericValue(val[1]);
+                final StringBuilder stringBuilder = new StringBuilder(val.length);
+                stringBuilder.append(i);
+                stringBuilder.append(j);
+                stringBuilder.append(" F");
+                MainActivity.this.runOnUiThread(new Runnable() {
+                    public void run() {
+                        temperature.setText(stringBuilder);
+                    }
+                });
+            }/*else if( characteristic.getUuid().toString().equals(CHARACTERISTIC_BULB.toString())){
+                byte[] val = characteristic.getValue();
+                final int i =  Character.getNumericValue(val[0]);
+                Log.d(TAG, "change "+ i);
+                MainActivity.this.runOnUiThread(new Runnable() {
+                    public void run() {
+                        bulbSwitch.setChecked(!(i==0));
+                    }
+                });
+            }*/
         }
 
         @Override
@@ -151,7 +171,6 @@ public class MainActivity extends AppCompatActivity {
             // this will get called when a device connects or disconnects
             switch (newState) {
                 case 2:
-
                     MainActivity.this.runOnUiThread(new Runnable() {
                         public void run() {
                             connStatus.setText("Connected");
@@ -172,49 +191,37 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onServicesDiscovered(final BluetoothGatt gatt, final int status) {
-            MainActivity.this.runOnUiThread(new Runnable() {
-                public void run() {
 
-                }
-            });
             List<BluetoothGattService> gattServices = bluetoothGatt.getServices();
-
-            for (BluetoothGattService gattService : gattServices) {
-
-                final String uuid = gattService.getUuid().toString();
-                Log.d(TAG,"Service discovered: " + uuid);
-                if(!uuid.equals(SERVICE_ID.toString())){
-                    continue;
+            gattService = gatt.getService(SERVICE_ID);
+            if(gattService != null){
+                temperatureGattChar = gattService.getCharacteristic(CHARACTERISTIC_TEMP);
+                bulbGattChar = gattService.getCharacteristic(CHARACTERISTIC_BULB);
+                beepGattChar = gattService.getCharacteristic(CHARACTERISTIC_BEEP);
+                for (BluetoothGattDescriptor descriptor : temperatureGattChar.getDescriptors()) {
+                    descriptor.setValue( BluetoothGattDescriptor.ENABLE_INDICATION_VALUE);
+                    gatt.writeDescriptor(descriptor);
                 }
-                MainActivity.this.runOnUiThread(new Runnable() {
-                    public void run() {
-
-                    }
-                });
-                List<BluetoothGattCharacteristic> gattCharacteristics =
-                        gattService.getCharacteristics();
-
-                // Loops through available Characteristics.
-                for (final BluetoothGattCharacteristic gattCharacteristic :
-                        gattCharacteristics) {
-
-                    final String charUuid = gattCharacteristic.getUuid().toString();
-                    Log.d(TAG,"Characteristic discovered for service: " + charUuid);
-                    boolean read = bluetoothGatt.readCharacteristic(gattCharacteristic);
-                    MainActivity.this.runOnUiThread(new Runnable() {
-                        public void run() {
-                            //Log.d(TAG,"Characteristic discovered for service: "+charUuid+"\n");
-
-                            /*if(charUuid.equals(CHARACTERISTIC_BULB.toString())){
-                                byte[] val = gattCharacteristic.getValue();
-                                //bulbSwitch.setChecked();
-                                Log.d(TAG, "value : "+val[0]+" : "+val.toString());
-                            }*/
-                        }
-                    });
-
+                gatt.setCharacteristicNotification(temperatureGattChar, true);
+                /*for (BluetoothGattDescriptor descriptor : bulbGattChar.getDescriptors()) {
+                    descriptor.setValue( BluetoothGattDescriptor.ENABLE_INDICATION_VALUE);
+                    gatt.writeDescriptor(descriptor);
                 }
+                gatt.setCharacteristicNotification(bulbGattChar, true);*/
+                /*boolean rs = gatt.readCharacteristic(bulbGattChar);
+                if(!rs){
+                    Log.d(TAG, "Can't read bulb Char");
+                }*/
+                /*boolean rs1 = gatt.readCharacteristic(beepGattChar);
+                if(!rs1){
+                    Log.d(TAG, "Can't read beep Char");
+                }*/
             }
+        }
+
+        @Override
+        public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+            super.onDescriptorWrite(gatt, descriptor, status);
         }
 
         @Override
@@ -223,15 +230,24 @@ public class MainActivity extends AppCompatActivity {
                                          final BluetoothGattCharacteristic characteristic,
                                          int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                String uuid = characteristic.getUuid().toString();
-                String ch = CHARACTERISTIC_BULB.toString();
-                if(uuid.equals(ch)){
+                /*if( characteristic.getUuid().toString().equals(CHARACTERISTIC_BULB.toString())){
                     byte[] val = characteristic.getValue();
-                    int i = ((int) val[0]);
-                    /*int i = ((val[0] & 0xff) | (val[1] << 8)) << 16 >> 16;*/
-                    Log.d(TAG, +val[0]+"  == "+" : "+i+" ");
-                    //bulbSwitch.setChecked();
-                }
+                    final int i =  Character.getNumericValue(val[0]);
+                    Log.d(TAG, "read "+ i);
+                    MainActivity.this.runOnUiThread(new Runnable() {
+                        public void run() {
+                            bulbSwitch.setChecked(!(i==0));
+                        }
+                    });
+                }else if( characteristic.getUuid().toString().equals(CHARACTERISTIC_BEEP.toString())){
+                    byte[] val = characteristic.getValue();
+                    final int i =  Character.getNumericValue(val[0]);
+                    MainActivity.this.runOnUiThread(new Runnable() {
+                        public void run() {
+                            //temperature.setText(String.valueOf(i));
+                        }
+                    });
+                }*/
             }
         }
     };
