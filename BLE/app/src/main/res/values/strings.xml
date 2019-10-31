@@ -1,5 +1,8 @@
 <resources>
     <string name="app_name">Smart BLE Bulb</string>
     <string name="status">Status:</string>
-
+    <string name="on">ON</string>
+    <string name="off">OFF</string>
+    <string name="bulb">Bulb Status</string>
+    <string name="beep">Beep</string>
 </resources>

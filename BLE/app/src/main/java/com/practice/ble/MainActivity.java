@@ -20,6 +20,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
@@ -48,9 +49,9 @@ public class MainActivity extends AppCompatActivity {
     UUID CHARACTERISTIC_BULB = UUID.fromString("fb959362-f26e-43a9-927c-7e17d8fb2d8d");
     UUID CHARACTERISTIC_TEMP = UUID.fromString("0ced9345-b31f-457d-a6a2-b3db9b03e39a");
     UUID CHARACTERISTIC_BEEP = UUID.fromString("ec958823-f26e-43a9-927c-7e17d8f32a90");
-    Button beepBtn;
+    Button beepBtn, bulbOn, bulbOff;
     TextView connStatus, temperature;
-    ToggleButton bulbSwitch;
+
 
     BluetoothLeScanner btScanner;
     BluetoothGatt bluetoothGatt;
@@ -88,28 +89,11 @@ public class MainActivity extends AppCompatActivity {
         connStatus = findViewById(R.id.status_text_view);
         connStatus.setText("Scanning...");
         temperature = findViewById(R.id.temperature_text_view);
-        bulbSwitch = findViewById(R.id.bulb_Switch);
+        bulbOn = findViewById(R.id.bulb_Switch_on);
+        bulbOff = findViewById(R.id.bulb_Switch_off);
 
         startScanning();
 
-        /*bulbSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                BluetoothGattCharacteristic charac = gattService.getCharacteristic(CHARACTERISTIC_BULB);
-                if (charac == null) {
-                    Log.e("GATT", "char not found!");
-                }
-                if (isChecked) {
-                    *//*byte[] value = new byte[1];
-                    value[0] = (byte) (1);
-                    charac.setValue(value);
-                    boolean status = bluetoothGatt.writeCharacteristic(charac);*//*
-                    //return status;
-                    Toast.makeText(MainActivity.this, "Switch Blub ON : ", Toast.LENGTH_SHORT).show();
-                } else {
-                    Toast.makeText(MainActivity.this, "Switch Blub OFF", Toast.LENGTH_SHORT).show();
-                }
-            }
-        });*/
         beepBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -198,6 +182,10 @@ public class MainActivity extends AppCompatActivity {
                 temperatureGattChar = gattService.getCharacteristic(CHARACTERISTIC_TEMP);
                 bulbGattChar = gattService.getCharacteristic(CHARACTERISTIC_BULB);
                 beepGattChar = gattService.getCharacteristic(CHARACTERISTIC_BEEP);
+                boolean rs = gatt.readCharacteristic(bulbGattChar);
+                if(!rs){
+                    Log.d(TAG, "Can't read bulb Char");
+                }
                 for (BluetoothGattDescriptor descriptor : temperatureGattChar.getDescriptors()) {
                     descriptor.setValue( BluetoothGattDescriptor.ENABLE_INDICATION_VALUE);
                     gatt.writeDescriptor(descriptor);
@@ -230,13 +218,19 @@ public class MainActivity extends AppCompatActivity {
                                          final BluetoothGattCharacteristic characteristic,
                                          int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                /*if( characteristic.getUuid().toString().equals(CHARACTERISTIC_BULB.toString())){
+                if( characteristic.getUuid().toString().equals(CHARACTERISTIC_BULB.toString())){
                     byte[] val = characteristic.getValue();
                     final int i =  Character.getNumericValue(val[0]);
                     Log.d(TAG, "read "+ i);
                     MainActivity.this.runOnUiThread(new Runnable() {
                         public void run() {
-                            bulbSwitch.setChecked(!(i==0));
+                            if(i==0){
+                                bulbOff.setBackgroundColor(getResources().getColor(R.color.colorPrimary));
+                                bulbOn.setBackgroundColor(getResources().getColor(R.color.colorDisable));
+                            }else{
+                                bulbOn.setBackgroundColor(getResources().getColor(R.color.colorPrimary));
+                                bulbOff.setBackgroundColor(getResources().getColor(R.color.colorDisable));
+                            }
                         }
                     });
                 }else if( characteristic.getUuid().toString().equals(CHARACTERISTIC_BEEP.toString())){
@@ -244,10 +238,10 @@ public class MainActivity extends AppCompatActivity {
                     final int i =  Character.getNumericValue(val[0]);
                     MainActivity.this.runOnUiThread(new Runnable() {
                         public void run() {
-                            //temperature.setText(String.valueOf(i));
+
                         }
                     });
-                }*/
+                }
             }
         }
     };
