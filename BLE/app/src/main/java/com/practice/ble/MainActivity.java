@@ -57,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
     BluetoothGatt bluetoothGatt;
     BluetoothGattService gattService;
     BluetoothGattCharacteristic temperatureGattChar, bulbGattChar, beepGattChar;
+    int beepCount = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -98,30 +99,18 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 if(beepGattChar!=null){
-                    boolean rs = bluetoothGatt.readCharacteristic(beepGattChar);
-                    if(!rs){
-                        Log.d(TAG, "Can't read beep Char");
-                    }
-                    byte[] val = beepGattChar.getValue();
-                    int i =  Character.getNumericValue(val[0]);
-                    if(i==1){
-                        byte[] value = new byte[1];
-                        value[0] = (byte) (0 & 0xFF);
-                        beepGattChar.setValue(value);
-                        boolean status = bluetoothGatt.writeCharacteristic(beepGattChar);
-                        if(status){
-                            beepBtn.setBackgroundColor(getResources().getColor(R.color.colorDisable));
-                        }
-                    }else{
-                        byte[] value = new byte[1];
+                    byte[] value = new byte[1];
+                    if(beepCount == 0){
                         value[0] = (byte) (1 & 0xFF);
-                        beepGattChar.setValue(value);
-                        boolean status = bluetoothGatt.writeCharacteristic(beepGattChar);
-                        if(status){
-                            beepBtn.setBackgroundColor(getResources().getColor(R.color.colorPrimary));
-                        }
+                        beepCount = 1;
+                    }else{
+                        value[0] = (byte) (0 & 0xFF);
+                        beepCount = 0;
                     }
-
+                    beepGattChar.setValue(value);
+                    bluetoothGatt.writeCharacteristic(beepGattChar);
+                }else{
+                    Toast.makeText(MainActivity.this, "Not connected", Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -210,6 +199,20 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
                 });
+            }else if( characteristic.getUuid().toString().equals(CHARACTERISTIC_BEEP.toString())){
+                byte[] val = characteristic.getValue();
+                final int i =  Character.getNumericValue(val[0]);
+                Log.d(TAG, "read "+ i);
+
+                MainActivity.this.runOnUiThread(new Runnable() {
+                    public void run() {
+                        if(i==1){
+                            beepBtn.setBackgroundColor(getResources().getColor(R.color.colorPrimary));
+                        }else{
+                            beepBtn.setBackgroundColor(getResources().getColor(R.color.colorDisable));
+                        }
+                    }
+                });
             }
         }
 
@@ -217,6 +220,12 @@ public class MainActivity extends AppCompatActivity {
         public void onConnectionStateChange(final BluetoothGatt gatt, final int status, final int newState) {
             // this will get called when a device connects or disconnects
             switch (newState) {
+                case 1:
+                    MainActivity.this.runOnUiThread(new Runnable() {
+                        public void run() {
+                            connStatus.setText("Connection Lost. Scanning...");
+                        }
+                    });
                 case 2:
                     MainActivity.this.runOnUiThread(new Runnable() {
                         public void run() {
@@ -229,10 +238,23 @@ public class MainActivity extends AppCompatActivity {
                 default:
                     MainActivity.this.runOnUiThread(new Runnable() {
                         public void run() {
-
+                            connStatus.setText("Scanning...");
                         }
                     });
                     break;
+            }
+        }
+
+        @Override
+        public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+            super.onCharacteristicWrite(gatt, characteristic, status);
+            if(characteristic.getUuid().toString().equals(CHARACTERISTIC_BEEP.toString())) {
+                for (BluetoothGattDescriptor descriptor : beepGattChar.getDescriptors()) {
+                    descriptor.setValue( BluetoothGattDescriptor.ENABLE_INDICATION_VALUE);
+                    gatt.writeDescriptor(descriptor);
+                }
+                gatt.setCharacteristicNotification(beepGattChar, true);
+                Log.d(TAG, "beep write : " + status + " : " + String.valueOf(characteristic.getValue()[0]));
             }
         }
 
