@@ -7,7 +7,7 @@ This app enables user to communicate with a Smart BLE bulb that is also capable 
 
 ## **Technologies:**
 * Mobile Framework: Android
-* Bluetooth Low Energy and API to discover devices, query for services, and transmit information.
+* Bluetooth Low Energy device and API to discover devices, query for services, and transmit information.
 
 Application Demonstration Video: [Smart-Bluetooth-Low-Energy-Bulb](https://youtu.be/yKQ3E6r9Axs)
 
